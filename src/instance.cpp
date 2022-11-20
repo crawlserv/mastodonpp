@@ -176,12 +176,26 @@ vector<string> Instance::get_post_formats() noexcept
     return _post_formats;
 }
 
+answer_type Instance::revokeToken(const string_view client_id,
+                                  const string_view client_secret,
+                                  const string_view token) {
+    parametermap parameters{{"client_id", client_id},
+                            {"client_secret", client_secret},
+                            {"token", token}};
+    
+    auto answer{
+        make_request(http_method::POST, _baseuri + "/oauth/revoke", parameters)};
+    
+    return answer;
+}
+
 answer_type Instance::ObtainToken::step_1(const string_view client_name,
                                           const string_view scopes,
-                                          const string_view website)
+                                          const string_view website,
+                                          const string_view redirect_uri)
 {
-    parametermap parameters{{"client_name", client_name},
-                            {"redirect_uris", "urn:ietf:wg:oauth:2.0:oob"}};
+    parametermap parameters{{"client_name", client_name}};
+    
     if (!scopes.empty())
     {
         _scopes = scopes;
@@ -190,6 +204,13 @@ answer_type Instance::ObtainToken::step_1(const string_view client_name,
     if (!website.empty())
     {
         parameters.insert({"website", website});
+    }
+    if(redirect_uri.empty()) {
+        parameters.insert({"redirect_uris", "urn:ietf:wg:oauth:2.0:oob"});
+    }
+    else {
+        _redirect_uri = redirect_uri;
+        parameters.insert({"redirect_uris", redirect_uri});
     }
 
     auto answer{
@@ -212,7 +233,7 @@ answer_type Instance::ObtainToken::step_1(const string_view client_name,
         string uri{_baseuri + "/oauth/authorize?scope=" + escape_url(scopes)
                    + "&response_type=code"
                      "&redirect_uri="
-                   + escape_url("urn:ietf:wg:oauth:2.0:oob")
+                   + escape_url(redirect_uri.empty() ? "urn:ietf:wg:oauth:2.0:oob" : redirect_uri)
                    + "&client_id=" + _client_id};
         if (!website.empty())
         {
@@ -229,13 +250,19 @@ answer_type Instance::ObtainToken::step_2(const string_view code)
 {
     parametermap parameters{{"client_id", _client_id},
                             {"client_secret", _client_secret},
-                            {"redirect_uri", "urn:ietf:wg:oauth:2.0:oob"},
                             {"code", code},
                             {"grant_type", "authorization_code"}};
     if (!_scopes.empty())
     {
         parameters.insert({"scope", _scopes});
     }
+    if(_redirect_uri.empty()) {
+        parameters.insert({"redirect_uri", "urn:ietf:wg:oauth:2.0:oob"});
+    }
+    else {
+        parameters.insert({"redirect_uri", _redirect_uri});
+    }
+
 
     auto answer{
         make_request(http_method::POST, _baseuri + "/oauth/token", parameters)};

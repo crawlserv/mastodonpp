@@ -214,6 +214,17 @@ public:
         _useragent = useragent;
         CURLWrapper::set_useragent(useragent);
     }
+    
+    /*!
+     *  @brief  Revokes a token via `/oauth/revoke`.
+     *
+     *  @param  token The access token to be revoked.
+     *
+     *  @return The full server response.
+     *
+     *  @since  0.3.0
+     */
+     [[nodiscard]] answer_type revokeToken(string_view client_id, string_view client_secret, string_view token);
 
     /*!
      *  @brief  Simplifies obtaining an OAuth 2.0 Bearer Access Token.
@@ -227,7 +238,7 @@ public:
      *  @code
      *  mastodonpp::Instance instance{"example.com", {}};
      *  mastodonpp::Instance::ObtainToken token{instance};
-     *  auto answer{token.step1("Good program", "read:blocks read:mutes", "")};
+     *  auto answer{token.step1("Good program", "read:blocks read:mutes", "", "")};
      *  if (answer)
      *  {
      *      std::cout << "Please visit " << answer << "\nand paste the code: ";
@@ -270,10 +281,12 @@ public:
          *  other implementations, like Pleroma.
          *
          *  @param  client_name The name of your application.
-         *  @param  scopes      Space separated list of scopes. Defaults to
-         *                      “read” if empty.
-         *  @param  website     The URI to the homepage of your application. Can
-         *                      be an empty string.
+         *  @param  scopes          Space separated list of scopes. Defaults to
+         *                          “read” if empty.
+         *  @param  website         The URI to the homepage of your application. Can
+         *                          be an empty string.
+         *  @param  redirect_uri    (Optional) URI to which the authorization code
+         *                          is forwarded. Can be an empty string.
          *
          *  @return The URI your user has to visit.
          *
@@ -281,7 +294,8 @@ public:
          */
         [[nodiscard]] answer_type step_1(string_view client_name,
                                          string_view scopes,
-                                         string_view website);
+                                         string_view website,
+                                         string_view redirect_uri = {});
 
         /*!
          *  @brief  Creates a token via `/oauth/token`.
@@ -293,12 +307,29 @@ public:
          *  this ObtainToken with.
          *
          *  @param  code The authorization code you got from the user.
+         *  
          *
          *  @return The access token.
          *
          *  @since  0.3.0
          */
         [[nodiscard]] answer_type step_2(string_view code);
+        
+        /*!
+         *  @brief  Returns the client id.
+         */
+        [[nodiscard]] inline string_view get_client_id() const noexcept
+        {
+            return _client_id;
+        }
+        
+        /*!
+         *  @brief  Returns the client secret.
+         */
+        [[nodiscard]] inline string_view get_client_secret() const noexcept
+        {
+            return _client_secret;
+        }
 
     private:
         Instance &_instance;
@@ -306,6 +337,7 @@ public:
         string _scopes;
         string _client_id;
         string _client_secret;
+        string _redirect_uri;
     };
 
 private:
